@@ -18,6 +18,7 @@ This is a reverse-engineered API client that connects directly to Huckleberry's 
 - 🧷 **Diaper Changes**: Log pee, poo, both, or dry checks with color/consistency
 - 📏 **Growth Measurements**: Record weight, height, and head circumference
 - 💊 **Medicine Tracking**: Manage medicine types and record doses
+- ✏️ **Safe History Changes**: Edit or delete exact records with revision checks
 - 🔄 **Real-time Updates**: Firebase snapshot listeners for instant synchronization
 - 👶 **Child Management**: Support for multiple children profiles
 
@@ -229,6 +230,34 @@ async def main() -> None:
   - `medicine_type`: A type returned by `list_medicine_types()` or `create_medicine_type()`
   - `amount`: Optional; the app-compatible blank value is stored as `0.0`
   - `units`: `"ml"`, `"oz"`, `"tsp"`, or `"drops"`
+
+### Revision-safe History Mutations
+
+History record list methods retain the Firestore document identity and update
+revision needed for safe edits and deletes:
+
+- `await list_sleep_interval_records(child_uid, start_time, end_time)`
+- `await list_feed_interval_records(child_uid, start_time, end_time)`
+- `await list_diaper_interval_records(child_uid, start_time, end_time)`
+- `await list_health_entry_records(child_uid, start_time, end_time)`
+
+Each returned record contains `reference` and `data`. Pass the unmodified
+`reference` to a mutation method:
+
+- `await update_sleep_interval(child_uid, reference, start_time=..., end_time=...)`
+- `await delete_sleep_interval(child_uid, reference)`
+- `await update_nursing_interval(child_uid, reference, start_time=..., left_duration=..., right_duration=..., last_side=...)`
+- `await update_bottle_interval(child_uid, reference, start_time=..., amount=..., bottle_type=..., units=...)`
+- `await delete_feed_interval(child_uid, reference)`
+- `await update_diaper_interval(child_uid, reference, start_time=..., mode=...)`
+- `await delete_diaper_interval(child_uid, reference)`
+- `await update_growth_entry(child_uid, reference, start_time=..., weight=..., height=..., head=..., units=...)`
+- `await delete_growth_entry(child_uid, reference)`
+
+Mutations run in a Firestore transaction. They reject stale revisions, support
+regular and batched history documents, and repair the affected `prefs.last*`
+cache atomically. List the record again after a successful edit before making
+another change because its revision will have changed.
 
 ### Real-time Listeners
 - `await setup_sleep_listener(child_uid, callback)` - Listen to sleep updates
