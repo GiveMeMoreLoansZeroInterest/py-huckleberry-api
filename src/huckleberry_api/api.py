@@ -3055,8 +3055,17 @@ class HuckleberryAPI:
             )
         else:
             interval = FirebaseGrowthData.model_validate(entry)
-            growth_data = interval.model_dump(by_alias=True, exclude_none=True)
-            growth_data["_id"] = interval.id_ or entry_key or document_id
+            raw_id = entry.get("_id")
+            # Same shape log_growth writes; history rows may omit `_id`.
+            last_growth = FirebaseLastGrowthData(
+                **interval.model_dump(),
+                _id=raw_id if isinstance(raw_id, str) and raw_id else entry_key or document_id,
+                type="health",
+                isNight=False,
+                multientry_key=None,
+            )
+            growth_data = to_firebase_dict(last_growth)
+            growth_data["multientry_key"] = None
             updates["prefs.lastGrowthEntry"] = growth_data
         return updates
 
