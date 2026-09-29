@@ -3154,7 +3154,9 @@ class HuckleberryAPI:
             option=root_option,
         )
         try:
-            await batch.commit()
+            # No client retry: a retried commit that already landed would fail
+            # its precondition and be misreported as a conflict.
+            await batch.commit(retry=None)
         except FailedPrecondition as exc:
             raise HuckleberryRecordConflictError("History changed while applying the mutation; fetch it again") from exc
 

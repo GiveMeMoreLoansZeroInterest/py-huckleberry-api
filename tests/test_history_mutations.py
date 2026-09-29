@@ -143,7 +143,9 @@ class FakeTransaction:
         if option is not None:
             self.options.append((reference.path, option))
 
-    async def commit(self) -> None:
+    async def commit(self, retry=None) -> None:
+        # A retried commit could land twice and then fail its precondition.
+        assert retry is None
         self.committed = True
 
 
